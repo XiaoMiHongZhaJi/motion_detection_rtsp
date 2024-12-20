@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运动检测</title>
+    <!-- 新 Bootstrap 核心 CSS 文件 -->
+    <link href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <link href="static/style.css" rel="stylesheet">
+    <!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+    <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="container mt-4">
+    <h1 class="text-center mb-4">运动检测</h1>
+
+    <!-- Start and Stop Buttons -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex align-items-center">
+                <button id="start" class="btn btn-success" onclick="startDetection()">开始检测</button>
+                <button id="stop" class="btn btn-danger ms-2" onclick="stopDetection()">停止检测</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Status Section -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex align-items-center">
+                <span class="me-2">当前状态：</span>
+                <span id="status-text" class="fw-bold">已停止</span>
+                <img id="status-light" src="static/red-light.png" alt="Status Light" width="20" class="ms-2">
+            </div>
+        </div>
+    </div>
+
+    <!-- Set Threshold -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex align-items-center form-inline">
+                <label for="threshold" class="form-label me-2">录像触发值：</label>
+                <input type="number" id="threshold" name="threshold" class="form-control" style="width: 100px; display: inline-block;" value="{{ threshold }}">
+                <button class="btn btn-primary ms-2" onclick="setThreshold()">设置</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Recorded Videos -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex align-items-center">
+                <span class="me-2">运动录像 共 {{ video_count }} 个视频</span>
+                <button class="btn btn-success ms-2" onclick="showAllVideos()">显示全部</button>
+                <div id="video-list">
+                    <div id="videos">
+                        {% for video in video_files %}
+                        <div class="video-item mt-4 col-md-3 col-sm-4 col-xs-6">
+                            <img src="static/cap/{{ video.thumbnail }}" alt="Thumbnail" width="100" class="me-3">
+                            <a target="_blank" href="static/cap/{{ video.filename }}" style="display: block;">{{ video.filename }}</a>
+                            <!--<button onclick="downloadVideo('{{ video.filename }}')" class="btn btn-secondary ms-2">Download</button>-->
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Logs Section -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center">
+                <span class="me-2">日志：</span>
+                <textarea id="logs" class="form-control" rows="10">正在加载日志...</textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    function showAllVideos() {
+        fetch('/get_all_videos')
+            .then(response => response.json())
+            .then(data => {
+                const videosContainer = document.getElementById('videos');
+                videosContainer.innerHTML = "";
+                const allVideos = data.videos;
+                allVideos.forEach(video => {
+                    const videoItem = document.createElement('div');
+                    videoItem.classList.add('video-item');//mt-4 col-md-3 col-sm-4 col-xs-6
+                    videoItem.classList.add('mt-4');
+                    videoItem.classList.add('col-md-3');
+                    videoItem.classList.add('col-sm-4');
+                    videoItem.classList.add('col-xs-6');
+                    videoItem.innerHTML = `
+                                <img src="static/cap/${video.thumbnail}" alt="Thumbnail" width="100" class="me-3">
+                                <a target="_blank" href="static/cap/${video.filename}" style="display: block;">${video.filename}</a>
+                            `;
+                    videosContainer.appendChild(videoItem);
+                });
+            });
+    }
+
+    let logInterval = null;
+    function updateLogs() {
+        fetch('/get_logs')
+            .then(response => response.json())
+            .then(data => {
+                const logs = data.logs.join('\n');  // 连接日志数组为多行文本
+                const textarea = document.getElementById('logs');
+                textarea.value = logs;
+                // 确保光标在最后一行
+                textarea.scrollTop = textarea.scrollHeight;
+            });
+    }
+
+    function startDetection() {
+        fetch('/start', {method: 'POST'})
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                updateStatus();
+            });
+    }
+
+    function stopDetection() {
+        fetch('/stop', {method: 'POST'})
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                updateStatus();
+            });
+    }
+
+    function setThreshold() {
+        const threshold = document.getElementById('threshold').value;
+        fetch('/set_threshold', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'threshold=' + threshold
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+            });
+    }
+
+    function updateStatus() {
+        fetch('/get_status')
+            .then(response => response.json())
+            .then(data => {
+                const status = data.status
+                document.getElementById('status-text').textContent = data.status;
+                document.getElementById('status-light').src = 'static/' + data.light + '-light.png';
+
+                if(status == "已停止"){
+                    clearInterval(logInterval);
+                    logInterval = null;
+                }else if(!logInterval){
+                    logInterval = setInterval(updateLogs, 2000);
+                }
+            });
+    }
+
+    updateStatus()
+
+    // setInterval(updateStatus, 1000);  // 每秒更新一次状态
+
+    function downloadVideo(filename) {
+        window.location.href = 'static/cap/' + filename;
+    }
+
+    function playVideo(filename) {
+        window.open('static/cap/' + filename, '_blank');
+    }
+</script>
+
+</body>
+</html>
