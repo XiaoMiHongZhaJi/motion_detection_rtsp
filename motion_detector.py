@@ -48,7 +48,7 @@ def send_file_to_telegram(file_path, caption):
         asyncio.run(bot.send_document(chat_id=NOTICE_CHAT_ID, document=file_path, caption=caption))
         log_message(f"发送通知成功：{file_path}")
     except Exception as e:
-        logging.error(f"发送通知失败：{e}")
+        log_message(f"发送通知失败：{e}", "error")
 
 
 # 发送通知（同步）
@@ -69,16 +69,19 @@ def send_file_to_telegram_sync(file_path, caption):
         loop.run_until_complete(bot.send_document(chat_id=NOTICE_CHAT_ID, document=file_path, caption=caption))
         log_message(f"发送通知成功：{file_path}")
     except Exception as e:
-        logging.error(f"发送通知失败：{e}")
+        log_message(f"发送通知失败：{e}", "error")
 
 
-def log_message(message):
+def log_message(message, level="info"):
     """自定义日志记录方法，保持最多50条日志"""
     current_time = datetime.now().strftime('%m-%d %H:%M:%S')
     log_buffer.append(f"{current_time} {message}")
     if len(log_buffer) > 100:
         log_buffer.pop(50)  # 如果超过50条，删除旧的
-    logging.info(message)  # 记录到标准日志系统
+    if level == "error":
+        logging.error(message)
+    else:
+        logging.info(message)
 
 
 def record_video(filename, cap, frame):
@@ -150,7 +153,7 @@ def start_detection():
         cap = cv2.VideoCapture(rtsp_url)
 
         if not cap.isOpened():
-            log_message(f"视频流打开失败：{rtsp_url}")
+            log_message(f"视频流打开失败：{rtsp_url}", "error")
             time.sleep(10)
             return
 
