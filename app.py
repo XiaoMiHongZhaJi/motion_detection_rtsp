@@ -77,7 +77,7 @@ def get_logs():
 def get_video_files():
     """获取 cap 目录下的视频文件和缩略图"""
     video_files = []
-    cap_folder = 'cap'
+    cap_folder = 'static/cap'
 
     # 获取 cap 目录下所有 mp4 文件
     if not os.path.exists(cap_folder):

@@ -1,4 +1,5 @@
 import asyncio
+import os
 import threading
 import cv2
 import time
@@ -124,6 +125,12 @@ def start_detection():
             return
 
         log_message(f"启动运动检测：{rtsp_url}")
+
+        cap_folder = 'static/cap'
+
+        # 获取 cap 目录下所有 mp4 文件
+        if not os.path.exists(cap_folder):
+            os.makedirs(cap_folder)
 
         while is_running:
             ret, frame = cap.read()
