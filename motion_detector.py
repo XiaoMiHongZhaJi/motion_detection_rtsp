@@ -11,6 +11,10 @@ from telegram.ext import Application
 TOKEN = 'Your Bot Token'
 NOTICE_CHAT_ID = -1001642336803
 
+# 设置代理
+PROXY = None
+# PROXY = "http://127.0.0.1:7890"
+
 # RTSP视频流地址
 rtsp_url = 'rtsp://192.168.10.38:8080/h264_ulaw.sdp'
 
@@ -37,7 +41,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # 发送通知
 def send_file_to_telegram(file_path, caption):
-    application = Application.builder().token(TOKEN).build()
+    application = Application.builder().token(TOKEN).proxy(PROXY).build()
     bot = application.bot
     asyncio.run(bot.send_document(chat_id=NOTICE_CHAT_ID, document=file_path, caption=caption))
 
