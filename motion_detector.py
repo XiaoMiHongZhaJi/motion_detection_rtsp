@@ -20,10 +20,10 @@ PROXY = None
 rtsp_url = 'rtsp://192.168.10.38:8080/h264_ulaw.sdp'
 
 # 运动检测的阈值，默认值为25000
-motion_threshold = 2500
+motion_threshold = 25000
 
-# 视频录制时长
-video_duration = 10  # 录制30秒
+# 检测到运动时录制时长
+video_duration = 30
 
 # 用于存储上一帧图像
 previous_frame = None
@@ -145,24 +145,30 @@ def start_detection():
             if frame_sequence % 20 == 0:
                 total_area, contours_count = detect_motion(frame)
 
+                fmt_total_area = f"{total_area:,}"
+                fmt_contours_count = f"{contours_count:,}"
+                fmt_motion_threshold = f"{motion_threshold:,}"
+
                 if total_area > motion_threshold:
                     # 录像
-                    log_message(f"检测到运动，变化区块：{contours_count}，变化量：{total_area} > {motion_threshold}")
+                    log_message(f"检测到运动，变化区块：{fmt_contours_count}，变化量：{fmt_total_area} > {fmt_motion_threshold}")
                     log_message(f"开始录像...")
 
-                    current_time = datetime.now().strftime('%m-%d_%H-%M-%S')
-                    filename = f"static/cap/{current_time}_{int(contours_count)}_{int(total_area)}.mp4"
+                    current_time = datetime.now().strftime('%m/%d %H:%M:%S')
+                    filename = f"static/cap/{datetime.now().strftime('%m-%d_%H-%M-%S')}_{int(contours_count)}_{int(total_area)}.mp4"
 
                     record_video(filename, cap, frame)
                     log_message(f"录像完成，文件保存为: {filename}，持续检测中...")
 
                     # 通知
-                    caption = f"{current_time} 检测到运动，变化区块：{contours_count}，变化量：{total_area} > {motion_threshold}"
-                    threading.Thread(target=send_file_to_telegram, args=(filename, caption,)).start()
-                    # asyncio.run(send_file_to_group_2(filename))
+                    caption = f"{current_time} 检测到运动\n变化区块：{fmt_contours_count}，变化量：{fmt_total_area} > {fmt_motion_threshold}"
+                    # 异步操作
+                    threading.Thread(target=send_file_to_telegram, args=(filename, caption)).start()
+                    # 同步操作
+                    # send_file_to_telegram(filename, caption)
                     previous_frame = None
                 elif total_area > 1:
-                    log_message(f"变化区块：{contours_count}，变化量：{total_area} < {motion_threshold}")
+                    log_message(f"变化区块：{fmt_contours_count}，变化量：{fmt_total_area} < {fmt_motion_threshold}")
 
         cap.release()
         log_message(f"检测出错，重新启动...")
