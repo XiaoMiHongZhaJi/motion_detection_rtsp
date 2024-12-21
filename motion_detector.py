@@ -22,7 +22,7 @@ rtsp_url = 'rtsp://192.168.10.38:8080/h264_ulaw.sdp'
 # 运动检测的阈值，默认值为25000
 motion_threshold = 25000
 
-# 检测到运动时录制时长
+# 检测到运动时录制时长（秒）
 video_duration = 30
 
 # 用于存储上一帧图像
@@ -42,9 +42,34 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # 发送通知
 def send_file_to_telegram(file_path, caption):
-    application = Application.builder().token(TOKEN).proxy(PROXY).build()
-    bot = application.bot
-    asyncio.run(bot.send_document(chat_id=NOTICE_CHAT_ID, document=file_path, caption=caption))
+    try:
+        application = Application.builder().token(TOKEN).proxy(PROXY).build()
+        bot = application.bot
+        asyncio.run(bot.send_document(chat_id=NOTICE_CHAT_ID, document=file_path, caption=caption))
+        log_message(f"发送通知成功：{file_path}")
+    except Exception as e:
+        logging.error(f"发送通知失败：{e}")
+
+
+# 发送通知（同步）
+def send_file_to_telegram_sync(file_path, caption):
+    try:
+        application = Application.builder().token(TOKEN).proxy(PROXY).build()
+        bot = application.bot
+
+        # 获取现有的事件循环
+        loop = asyncio.get_event_loop()
+
+        # 如果当前事件循环已关闭，则创建一个新的事件循环
+        if loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        # 使用现有的事件循环运行异步任务
+        loop.run_until_complete(bot.send_document(chat_id=NOTICE_CHAT_ID, document=file_path, caption=caption))
+        log_message(f"发送通知成功：{file_path}")
+    except Exception as e:
+        logging.error(f"发送通知失败：{e}")
 
 
 def log_message(message):
@@ -162,10 +187,10 @@ def start_detection():
 
                     # 通知
                     caption = f"{current_time} 检测到运动\n变化区块：{fmt_contours_count}，变化量：{fmt_total_area} > {fmt_motion_threshold}"
-                    # 异步操作
-                    threading.Thread(target=send_file_to_telegram, args=(filename, caption)).start()
+                    # 异步操作（如果报错，则改为同步）
+                    # threading.Thread(target=send_file_to_telegram, args=(filename, caption)).start()
                     # 同步操作
-                    # send_file_to_telegram(filename, caption)
+                    send_file_to_telegram_sync(filename, caption)
                     previous_frame = None
                 elif total_area > 1:
                     log_message(f"变化区块：{fmt_contours_count}，变化量：{fmt_total_area} < {fmt_motion_threshold}")
