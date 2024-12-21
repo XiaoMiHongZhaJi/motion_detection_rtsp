@@ -66,6 +66,10 @@ def record_video(filename, cap, frame):
 
     # 创建视频写入对象
     fourcc = cv2.VideoWriter.fourcc(*'avc1')
+    # 如果报错 换成下方的
+    # fourcc = cv2.VideoWriter.fourcc(*'x264')
+    # fourcc = cv2.VideoWriter.fourcc(*'mp4v')
+    # fourcc = cv2.VideoWriter.fourcc(*'mjpg')
     frame_height, frame_width = frame.shape[:2]
     fps = cap.get(cv2.CAP_PROP_FPS)
     video_writer = cv2.VideoWriter(filename, fourcc, fps, (frame_width, frame_height))
