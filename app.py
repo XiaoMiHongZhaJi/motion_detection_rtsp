@@ -27,22 +27,22 @@ def get_all_videos():
 
 @app.route('/start', methods=['POST'])
 def start():
-    """启动监控检测"""
+    """启动运动检测"""
     is_running, is_recording, recording_video_file = get_motion_status()
     if not is_running:
         threading.Thread(target=start_detection, daemon=True).start()  # 启动后台线程
-        return jsonify({"status": "started"}), 200
-    return jsonify({"status": "already started"}), 200
+        return jsonify({"status": "已启动运动检测"}), 200
+    return jsonify({"status": "已启动，请勿重复操作"}), 200
 
 
 @app.route('/stop', methods=['POST'])
 def stop():
-    """暂停监控检测"""
+    """暂停运动检测"""
     is_running, is_recording, recording_video_file = get_motion_status()
     if is_running:
         stop_detection()
-        return jsonify({"status": "stopped"}), 200
-    return jsonify({"status": "already stopped"}), 200
+        return jsonify({"status": "已停止运动检测"}), 200
+    return jsonify({"status": "已停止，请勿重复操作"}), 200
 
 
 @app.route('/set_threshold', methods=['POST'])
@@ -69,7 +69,7 @@ def delete_all_videos():
             logging.error(e)
             return jsonify({"error": str(e)}), 500
 
-    return jsonify({"message": "所有视频已删除成功"}), 200
+    return jsonify({"message": "已删除所有视频"}), 200
 
 
 @app.route('/get_status', methods=['GET'])

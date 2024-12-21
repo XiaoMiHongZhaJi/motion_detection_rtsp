@@ -17,16 +17,6 @@
 <div class="container mt-4">
     <h1 class="text-center mb-4">运动检测</h1>
 
-    <!-- Start and Stop Buttons -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="d-flex align-items-center">
-                <button id="start" class="btn btn-success" onclick="startDetection()">开始检测</button>
-                <button id="stop" class="btn btn-danger ms-2" onclick="stopDetection()">停止检测</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Current Status Section -->
     <div class="row mb-4">
         <div class="col-md-12">
@@ -34,6 +24,17 @@
                 <span class="me-2">当前状态：</span>
                 <span id="status-text" class="fw-bold"></span>
                 <span id="status-light" class="fw-bold"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start and Stop Buttons -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex align-items-center">
+                <button id="start" class="btn btn-success" onclick="startDetection()">开始检测</button>
+                <button id="stop" class="btn btn-danger ms-2" onclick="stopDetection()">停止检测</button>
+                <button id="stop" class="btn btn-primary ms-2" onclick="freshDetection()">手动刷新</button>
             </div>
         </div>
     </div>
@@ -54,8 +55,8 @@
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="d-flex align-items-center">
-                <span class="me-2">运动录像 共 <span id="video_count">{{ video_count }}</span> 个视频</span>
-                <button class="btn btn-success ms-2" onclick="showAllVideos()">显示全部</button>
+                <span class="me-2">运动录像：共 <span id="video_count">{{ video_count }}</span> 个视频</span>
+                <button class="btn btn-success ms-2" onclick="showAllVideos(true)">显示全部</button>
                 <button class="btn btn-danger ms-2" onclick="confirmDelete()">删除全部</button>
             </div>
         </div>
@@ -112,7 +113,7 @@
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     </div>
-    <div id="errorToast" class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div id="dangerToast" class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body">
                 删除失败！请稍后再试。
@@ -124,7 +125,7 @@
 
 <script>
     let deleteModal = null;
-    function showAllVideos() {
+    function showAllVideos(showTips) {
         fetch('/get_all_videos')
             .then(response => response.json())
             .then(data => {
@@ -145,6 +146,12 @@
                             `;
                     videosContainer.appendChild(videoItem);
                 });
+                if(showTips){
+                    showToast('success', "已显示全部视频");
+                }
+            })
+            .catch(error => {
+                showToast('danger', error);
             });
     }
 
@@ -164,7 +171,7 @@
                 deleteModal.hide();
             })
             .catch(error => {
-                showToast('danger', "删除失败: " + data.error);
+                showToast('danger', error);
                 deleteModal.hide();
             });
     }
@@ -178,6 +185,9 @@
 
     // 显示 Toast 提示
     function showToast(type, message) {
+        if(type == "danger" && message.message.indexOf("Failed to fetch") > -1){
+            message = "网络错误";
+        }
         const toastElement = document.getElementById(type + 'Toast');
         const toast = new bootstrap.Toast(toastElement);
         toast.show();
@@ -197,7 +207,17 @@
                 textarea.value = logs;
                 // 确保光标在最后一行
                 textarea.scrollTop = textarea.scrollHeight;
+            })
+            .catch(error => {
+                showToast('danger', error);
             });
+    }
+
+    function freshDetection() {
+        updateLogs();
+        updateStatus();
+        showAllVideos();
+        showToast('success', "已刷新状态");
     }
 
     function startDetection() {
@@ -207,6 +227,9 @@
                 console.log(data);
                 showToast('success', data.status);
                 updateStatus();
+            })
+            .catch(error => {
+                showToast('danger', error);
             });
     }
 
@@ -218,6 +241,9 @@
                 showToast('success', data.status);
                 updateStatus();
                 updateLogs();
+            })
+            .catch(error => {
+                showToast('danger', error);
             });
     }
 
@@ -232,6 +258,9 @@
             .then(data => {
                 showToast('success', "设置成功，当前触发阈值：" + data.threshold);
                 console.log(data);
+            })
+            .catch(error => {
+                showToast('danger', error);
             });
     }
 
@@ -260,6 +289,9 @@
                     }
                 }
                 document.getElementById('status-light').innerHTML = light
+            })
+            .catch(error => {
+                showToast('danger', error);
             });
     }
 
