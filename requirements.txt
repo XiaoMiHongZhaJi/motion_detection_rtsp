@@ -1,5 +1,4 @@
 flask
 python-telegram-bot
 python-telegram-bot[socks]
-moviepy
 opencv-python-headless
