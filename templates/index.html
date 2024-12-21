@@ -195,10 +195,33 @@
     }
 
     let logInterval = null;
-    function updateLogs() {
-        fetch('/get_logs')
+    function updateStatusAndLogs() {
+        fetch('/get_status_and_logs')
             .then(response => response.json())
             .then(data => {
+                // 更新状态
+                const status = data.status;
+                document.getElementById('status-text').textContent = data.status;
+                let light = '';
+                if(status == "已停止"){
+                    light = '<svg t="1734787639175" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1855" data-darkreader-inline-fill="" width="20" height="20"><path d="M513.44055547 503.62447215m-369.73913846 0a369.73913845 369.73913845 0 1 0 739.47827697 0 369.73913845 369.73913845 0 1 0-739.47827697 0Z" fill="#FF0000" p-id="1856" data-darkreader-inline-fill="" style="--darkreader-inline-fill: #cc0000;"></path></svg>'
+                    clearInterval(logInterval);
+                    logInterval = null;
+                }else if(status == "检测中"){
+                    light = '<svg t="1734786375155" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1712" data-darkreader-inline-fill="" width="20" height="20"><path d="M513.44055547 503.62447215m-369.73913846 0a369.73913845 369.73913845 0 1 0 739.47827697 0 369.73913845 369.73913845 0 1 0-739.47827697 0Z" fill="#1afa29" p-id="1713" data-darkreader-inline-fill="" style="--darkreader-inline-fill: #04bb3b;"></path></svg>'
+                    if(!logInterval){
+                        logInterval = setInterval(updateStatusAndLogs, 2000);
+                    }
+                    const textarea = document.getElementById('logs');
+                    textarea.value = "日志加载中...";
+                }else if(status == "录像中"){
+                    light = '<svg t="1734788083149" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2284" data-darkreader-inline-fill="" width="20" height="20"><path d="M513.44055547 503.62447215m-369.73913846 0a369.73913845 369.73913845 0 1 0 739.47827697 0 369.73913845 369.73913845 0 1 0-739.47827697 0Z" fill="#f4ea2a" p-id="2285" data-darkreader-inline-fill="" style="--darkreader-inline-fill: #847e07;"></path></svg>'
+                    if(!logInterval){
+                        logInterval = setInterval(updateStatusAndLogs, 2000);
+                    }
+                }
+                document.getElementById('status-light').innerHTML = light
+                // 更新日志
                 if(!data.logs){
                     return;
                 }
@@ -214,8 +237,7 @@
     }
 
     function freshDetection() {
-        updateLogs();
-        updateStatus();
+        updateStatusAndLogs();
         showAllVideos();
         showToast('success', "已刷新状态");
     }
@@ -226,7 +248,7 @@
             .then(data => {
                 console.log(data);
                 showToast('success', data.status);
-                updateStatus();
+                updateStatusAndLogs();
             })
             .catch(error => {
                 showToast('danger', error);
@@ -239,8 +261,7 @@
             .then(data => {
                 console.log(data);
                 showToast('success', data.status);
-                updateStatus();
-                updateLogs();
+                updateStatusAndLogs();
             })
             .catch(error => {
                 showToast('danger', error);
@@ -264,38 +285,7 @@
             });
     }
 
-    function updateStatus() {
-        fetch('/get_status')
-            .then(response => response.json())
-            .then(data => {
-                const status = data.status;
-                document.getElementById('status-text').textContent = data.status;
-                let light = '';
-                if(status == "已停止"){
-                    light = '<svg t="1734787639175" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1855" data-darkreader-inline-fill="" width="20" height="20"><path d="M513.44055547 503.62447215m-369.73913846 0a369.73913845 369.73913845 0 1 0 739.47827697 0 369.73913845 369.73913845 0 1 0-739.47827697 0Z" fill="#FF0000" p-id="1856" data-darkreader-inline-fill="" style="--darkreader-inline-fill: #cc0000;"></path></svg>'
-                    clearInterval(logInterval);
-                    logInterval = null;
-                }else if(status == "检测中"){
-                    light = '<svg t="1734786375155" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1712" data-darkreader-inline-fill="" width="20" height="20"><path d="M513.44055547 503.62447215m-369.73913846 0a369.73913845 369.73913845 0 1 0 739.47827697 0 369.73913845 369.73913845 0 1 0-739.47827697 0Z" fill="#1afa29" p-id="1713" data-darkreader-inline-fill="" style="--darkreader-inline-fill: #04bb3b;"></path></svg>'
-                    if(!logInterval){
-                        logInterval = setInterval(updateLogs, 2000);
-                    }
-                    const textarea = document.getElementById('logs');
-                    textarea.value = "日志加载中...";
-                }else if(status == "录像中"){
-                    light = '<svg t="1734788083149" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2284" data-darkreader-inline-fill="" width="20" height="20"><path d="M513.44055547 503.62447215m-369.73913846 0a369.73913845 369.73913845 0 1 0 739.47827697 0 369.73913845 369.73913845 0 1 0-739.47827697 0Z" fill="#f4ea2a" p-id="2285" data-darkreader-inline-fill="" style="--darkreader-inline-fill: #847e07;"></path></svg>'
-                    if(!logInterval){
-                        logInterval = setInterval(updateLogs, 2000);
-                    }
-                }
-                document.getElementById('status-light').innerHTML = light
-            })
-            .catch(error => {
-                showToast('danger', error);
-            });
-    }
-
-    updateStatus();
+    updateStatusAndLogs();
 
     // setInterval(updateStatus, 1000);  // 每秒更新一次状态
 

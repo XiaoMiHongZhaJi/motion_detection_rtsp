@@ -72,25 +72,20 @@ def delete_all_videos():
     return jsonify({"message": "已删除所有视频"}), 200
 
 
-@app.route('/get_status', methods=['GET'])
-def get_status():
+@app.route('/get_status_and_logs', methods=['GET'])
+def get_status_and_logs():
+    result = {"logs": log_buffer[-50:]}
     """获取当前状态"""
     is_running, is_recording, recording_video_file = get_motion_status()
     if is_running:
         if is_recording:
-            status = {"status": "录像中"}
+            result["status"] = "录像中"
         else:
-            status = {"status": "检测中"}
+            result["status"] = "检测中"
     else:
-        status = {"status": "已停止"}
+        result["status"] = "已停止"
 
-    return jsonify(status)
-
-
-@app.route('/get_logs', methods=['GET'])
-def get_logs():
-    """获取最新的日志内容"""
-    return jsonify({"logs": log_buffer[-20:]})  # 返回最近100条日志
+    return jsonify(result)
 
 
 def get_video_files():
