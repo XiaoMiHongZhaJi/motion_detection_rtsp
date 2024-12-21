@@ -1,9 +1,12 @@
+import logging
 from flask import Flask, render_template, request, jsonify
 import threading
 import os
 from motion_detector import start_detection, stop_detection, get_motion_status, log_buffer, set_motion_threshold
 
 app = Flask(__name__)
+# 录像文件
+cap_folder = 'static/cap/'
 
 
 @app.route('/')
@@ -53,17 +56,32 @@ def set_threshold():
         return jsonify({"error": "Invalid threshold value"}), 400
 
 
+@app.route('/delete_all_videos', methods=['POST'])
+def delete_all_videos():
+    """删除所有视频文件"""
+    video_files = get_video_files()
+    for video in video_files:
+        try:
+            os.remove(os.path.join(cap_folder, video['filename']))
+            os.remove(os.path.join(cap_folder, video['thumbnail']))
+        except Exception as e:
+            logging.error(e)
+            return jsonify({"error": str(e)}), 500
+
+    return jsonify({"message": "所有视频已删除成功"}), 200
+
+
 @app.route('/get_status', methods=['GET'])
 def get_status():
     """获取当前状态"""
     is_running, is_recording, recording_video_file = get_motion_status()
     if is_running:
         if is_recording:
-            status = {"status": "录像中", "light": "yellow"}
+            status = {"status": "录像中"}
         else:
-            status = {"status": "检测中", "light": "green"}
+            status = {"status": "检测中"}
     else:
-        status = {"status": "已停止", "light": "red"}
+        status = {"status": "已停止"}
 
     return jsonify(status)
 
@@ -77,7 +95,6 @@ def get_logs():
 def get_video_files():
     """获取 cap 目录下的视频文件和缩略图"""
     video_files = []
-    cap_folder = 'static/cap'
 
     # 获取 cap 目录下所有 mp4 文件
     if not os.path.exists(cap_folder):

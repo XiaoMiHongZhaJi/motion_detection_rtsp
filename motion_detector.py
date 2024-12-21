@@ -140,9 +140,10 @@ def detect_motion(frame):
 
 
 def start_detection():
-    """启动监控检测"""
+    """启动运动检测"""
     global is_running, previous_frame, frame_sequence
     is_running = True
+    log_message(f"准备启动运动检测：{rtsp_url}")
 
     while is_running:
         frame_sequence = 0  # 重置帧序列
@@ -153,7 +154,7 @@ def start_detection():
             time.sleep(10)
             return
 
-        log_message(f"启动运动检测：{rtsp_url}")
+        log_message(f"已启动运动检测")
 
         cap_folder = 'static/cap'
 
@@ -188,16 +189,15 @@ def start_detection():
                     # 通知
                     caption = f"{current_time} 检测到运动\n变化区块：{fmt_contours_count}，变化量：{fmt_total_area} > {fmt_motion_threshold}"
                     # 异步操作（如果报错，则改为同步）
-                    # threading.Thread(target=send_file_to_telegram, args=(filename, caption)).start()
+                    threading.Thread(target=send_file_to_telegram, args=(filename, caption)).start()
                     # 同步操作
-                    send_file_to_telegram_sync(filename, caption)
+                    # send_file_to_telegram_sync(filename, caption)
                     previous_frame = None
                 elif total_area > 1:
                     log_message(f"变化区块：{fmt_contours_count}，变化量：{fmt_total_area} < {fmt_motion_threshold}")
 
         cap.release()
-        log_message(f"检测出错，重新启动...")
-        time.sleep(2)
+        log_message(f"cap已释放：{rtsp_url}")
 
 
 def get_motion_status():
@@ -210,9 +210,10 @@ def set_motion_threshold(motion_threshold_new):
 
 
 def stop_detection():
-    """暂停监控检测"""
+    """停止运动检测"""
     global is_running
     is_running = False
+    log_message(f"运动检测已停止：{rtsp_url}")
 
 
 if __name__ == '__main__':
