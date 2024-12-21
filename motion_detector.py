@@ -1,20 +1,24 @@
+import asyncio
+import threading
 import cv2
 import time
-import subprocess
-from datetime import datetime
 import logging
+from datetime import datetime
 
-# 创建一个固定大小的日志缓存，最多保存 100 条日志
-log_buffer = []
+from telegram.ext import Application
 
-# 配置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# 设置 Bot Token
+TOKEN = 'Your Bot Token'
+NOTICE_CHAT_ID = -1001642336803
 
 # RTSP视频流地址
 rtsp_url = 'rtsp://192.168.10.38:8080/h264_ulaw.sdp'
 
 # 运动检测的阈值，默认值为25000
 motion_threshold = 2500
+
+# 视频录制时长
+video_duration = 10  # 录制30秒
 
 # 用于存储上一帧图像
 previous_frame = None
@@ -23,42 +27,56 @@ frame_sequence = 0
 # 状态管理
 is_running = False  # 是否正在运行检测
 is_recording = False  # 是否正在录制
-recording_video_file = ""  # 当前正在录制的视频文件名
+
+# 创建一个固定大小的日志缓存，最多保存 100 条日志
+log_buffer = []
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+
+# 发送通知
+def send_file_to_telegram(file_path, caption):
+    application = Application.builder().token(TOKEN).build()
+    bot = application.bot
+    asyncio.run(bot.send_document(chat_id=NOTICE_CHAT_ID, document=file_path, caption=caption))
 
 
 def log_message(message):
     """自定义日志记录方法，保持最多50条日志"""
     current_time = datetime.now().strftime('%m-%d %H:%M:%S')
     log_buffer.append(f"{current_time} {message}")
-    if len(log_buffer) > 40:
-        log_buffer.pop(20)  # 如果超过50条，删除最旧的一条
+    if len(log_buffer) > 100:
+        log_buffer.pop(50)  # 如果超过50条，删除旧的
     logging.info(message)  # 记录到标准日志系统
 
 
-def record_video(contours_count, total_area):
+def record_video(filename, cap, frame):
     """录像功能"""
-    global is_recording, recording_video_file
+    global is_recording
 
     is_recording = True
-    current_time = datetime.now().strftime('%m-%d_%H-%M-%S')
-    filename = f"cap/{current_time}_{int(contours_count)}_{int(total_area)}"
-    recording_video_file = filename  # 保存当前录像文件名
+    # 获取第一帧并保存为 JPG
+    cv2.imwrite(filename.replace(".mp4", ".jpg"), frame)
 
-    # 使用 FFmpeg 录制视频
-    command = [
-        'ffmpeg',
-        '-i', rtsp_url,
-        '-c:v', "copy",
-        '-t', '00:00:30',
-        filename + ".mp4"
-    ]
-    process = subprocess.Popen(command, stderr=subprocess.DEVNULL)
-    # process = subprocess.Popen(command)
+    # 创建视频写入对象
+    fourcc = cv2.VideoWriter.fourcc(*'avc1')
+    frame_height, frame_width = frame.shape[:2]
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    video_writer = cv2.VideoWriter(filename, fourcc, fps, (frame_width, frame_height))
 
-    process.wait()
+    # 启动录像并写入帧
+    start_time = time.time()
+    while time.time() - start_time < video_duration:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        video_writer.write(frame)  # 写入视频帧
+
+    # 停止录像
+    video_writer.release()
     is_recording = False
-    recording_video_file = ""
-    return filename
+    return True
 
 
 def detect_motion(frame):
@@ -113,13 +131,20 @@ def start_detection():
                 total_area, contours_count = detect_motion(frame)
 
                 if total_area > motion_threshold:
+                    # 录像
                     log_message(f"检测到运动，变化区块：{contours_count}，变化量：{total_area} > {motion_threshold}")
                     log_message(f"开始录像...")
-                    filename = record_video(contours_count, total_area)
 
-                    # 获取第一帧并保存为 JPG
-                    cv2.imwrite(filename + ".jpg", frame)  # 保存第一帧为 JPG
-                    log_message(f"录像完成，持续检测中...")
+                    current_time = datetime.now().strftime('%m-%d_%H-%M-%S')
+                    filename = f"static/cap/{current_time}_{int(contours_count)}_{int(total_area)}.mp4"
+
+                    record_video(filename, cap, frame)
+                    log_message(f"录像完成，文件保存为: {filename}，持续检测中...")
+
+                    # 通知
+                    caption = f"{current_time} 检测到运动，变化区块：{contours_count}，变化量：{total_area} > {motion_threshold}"
+                    threading.Thread(target=send_file_to_telegram, args=(filename, caption,)).start()
+                    # asyncio.run(send_file_to_group_2(filename))
                     previous_frame = None
                 elif total_area > 1:
                     log_message(f"变化区块：{contours_count}，变化量：{total_area} < {motion_threshold}")
@@ -142,3 +167,7 @@ def stop_detection():
     """暂停监控检测"""
     global is_running
     is_running = False
+
+
+if __name__ == '__main__':
+    start_detection()
