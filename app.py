@@ -48,12 +48,13 @@ def stop():
 @app.route('/set_threshold', methods=['POST'])
 def set_threshold():
     """设置运动检测的灵敏度（阈值）"""
+    threshold = request.form['threshold']
     try:
-        motion_threshold = int(request.form['threshold'])
+        motion_threshold = int(threshold)
         set_motion_threshold(motion_threshold)
-        return jsonify({"status": "threshold updated", "threshold": motion_threshold}), 200
+        return jsonify({"status": "threshold updated", "threshold": f"{motion_threshold:,}"}), 200
     except ValueError:
-        return jsonify({"error": "Invalid threshold value"}), 400
+        return jsonify({"error": f"错误的值：{threshold}"}), 400
 
 
 @app.route('/delete_all_videos', methods=['POST'])

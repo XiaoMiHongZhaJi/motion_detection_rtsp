@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>运动检测</title>
     <!-- 新 Bootstrap 核心 CSS 文件 -->
-    <link href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.staticfile.org/twitter-bootstrap/5.1.3/css/bootstrap.css" rel="stylesheet">
     <link href="static/style.css" rel="stylesheet">
     <!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
     <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
     <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
-    <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/5.1.3/js/bootstrap.bundle.js"></script>
 </head>
 <body>
 
@@ -42,7 +42,7 @@
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="d-flex align-items-center form-inline">
-                <label for="threshold" class="form-label me-2">录像触发值：</label>
+                <label for="threshold" class="form-label me-2">录像触发阈值：</label>
                 <input type="number" id="threshold" name="threshold" class="form-control" style="width: 100px; display: inline-block;" value="{{ threshold }}">
                 <button class="btn btn-primary ms-2" onclick="setThreshold()">设置</button>
             </div>
@@ -54,20 +54,19 @@
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="d-flex align-items-center">
-                <span class="me-2">运动录像 共 {{ video_count }} 个视频</span>
+                <span class="me-2">运动录像 共 <span id="video_count">{{ video_count }}</span> 个视频</span>
                 <button class="btn btn-success ms-2" onclick="showAllVideos()">显示全部</button>
-                <button class="btn btn-danger ms-2" onclick="deleteAllVideos()">删除全部</button>
-                <div id="video-list">
-                    <div id="videos">
-                        {% for video in video_files %}
-                        <div class="video-item mt-4 col-md-3 col-sm-4 col-xs-6">
-                            <img src="static/cap/{{ video.thumbnail }}" alt="Thumbnail" width="100" class="me-3">
-                            <a target="_blank" href="static/cap/{{ video.filename }}" style="display: block;">{{ video.filename }}</a>
-                            <!--<button onclick="downloadVideo('{{ video.filename }}')" class="btn btn-secondary ms-2">Download</button>-->
-                        </div>
-                        {% endfor %}
+                <button class="btn btn-danger ms-2" onclick="confirmDelete()">删除全部</button>
+            </div>
+        </div>
+        <div class="col-md-12" id="video-list">
+            <div id="videos" style="display: flex;">
+                {% for video in video_files %}
+                    <div class="video-item mt-4 col-md-3 col-sm-4 col-xs-6">
+                        <img src="static/cap/{{ video.thumbnail }}" alt="Thumbnail" width="100" class="me-3">
+                        <a target="_blank" href="static/cap/{{ video.filename }}" style="display: block;">{{ video.filename }}</a>
                     </div>
-                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
@@ -76,8 +75,8 @@
     <!-- Logs Section -->
     <div class="row mb-4">
         <div class="col-md-8">
+            <span class="me-2">检测日志：</span>
             <div class="d-flex align-items-center">
-                <span class="me-2">检测日志：</span>
                 <textarea id="logs" class="form-control" rows="10">暂无日志</textarea>
             </div>
         </div>
@@ -97,7 +96,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-danger" onclick="confirmDelete()">确认删除</button>
+                <button type="button" class="btn btn-danger" onclick="deleteAllVideos()">确认删除</button>
             </div>
         </div>
     </div>
@@ -105,7 +104,7 @@
 
 <!-- Bootstrap Toasts，用于显示操作提示 -->
 <div id="toast-container" style="position: absolute; top: 20px; right: 20px; z-index: 1050;">
-    <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true" style="display: none;">
+    <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body">
                 删除成功！
@@ -113,7 +112,7 @@
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     </div>
-    <div id="errorToast" class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true" style="display: none;">
+    <div id="errorToast" class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body">
                 删除失败！请稍后再试。
@@ -124,7 +123,7 @@
 </div>
 
 <script>
-
+    let deleteModal = null;
     function showAllVideos() {
         fetch('/get_all_videos')
             .then(response => response.json())
@@ -132,6 +131,7 @@
                 const videosContainer = document.getElementById('videos');
                 videosContainer.innerHTML = "";
                 const allVideos = data.videos;
+                document.getElementById("video_count").innerText = allVideos.length;
                 allVideos.forEach(video => {
                     const videoItem = document.createElement('div');
                     videoItem.classList.add('video-item');//mt-4 col-md-3 col-sm-4 col-xs-6
@@ -150,24 +150,38 @@
 
     // 删除所有视频的函数
     function deleteAllVideos() {
-        if (confirm("确认删除所有视频文件吗？")) {
-            fetch('/delete_all_videos', {
-                method: 'POST'
+        fetch('/delete_all_videos', {
+            method: 'POST'
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showToast('success', data.message);
+                    showAllVideos();
+                } else if (data.error) {
+                    showToast('danger', "删除失败: " + data.error);
+                }
+                deleteModal.hide();
             })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.message) {
-                        alert(data.message);
-                        // 刷新页面或者执行其他操作
-                        location.reload();  // 刷新页面，显示空的视频列表
-                    } else if (data.error) {
-                        alert("删除失败: " + data.error);
-                    }
-                })
-                .catch(error => {
-                    alert("删除失败: " + error);
-                });
-        }
+            .catch(error => {
+                showToast('danger', "删除失败: " + data.error);
+                deleteModal.hide();
+            });
+    }
+
+    function confirmDelete() {
+        deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'), {
+            keyboard: false
+        });
+        deleteModal.show();  // 显示模态框
+    }
+
+    // 显示 Toast 提示
+    function showToast(type, message) {
+        const toastElement = document.getElementById(type + 'Toast');
+        const toast = new bootstrap.Toast(toastElement);
+        toast.show();
+        toastElement.querySelector('.toast-body').textContent = message;
     }
 
     let logInterval = null;
@@ -191,6 +205,7 @@
             .then(response => response.json())
             .then(data => {
                 console.log(data);
+                showToast('success', data.status);
                 updateStatus();
             });
     }
@@ -200,6 +215,7 @@
             .then(response => response.json())
             .then(data => {
                 console.log(data);
+                showToast('success', data.status);
                 updateStatus();
                 updateLogs();
             });
@@ -214,6 +230,7 @@
         })
             .then(response => response.json())
             .then(data => {
+                showToast('success', "设置成功，当前触发阈值：" + data.threshold);
                 console.log(data);
             });
     }
@@ -226,18 +243,18 @@
                 document.getElementById('status-text').textContent = data.status;
                 let light = '';
                 if(status == "已停止"){
-                    light = '<svg t="1734787639175" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1855" data-darkreader-inline-fill="" width="12" height="12"><path d="M513.44055547 503.62447215m-369.73913846 0a369.73913845 369.73913845 0 1 0 739.47827697 0 369.73913845 369.73913845 0 1 0-739.47827697 0Z" fill="#FF0000" p-id="1856" data-darkreader-inline-fill="" style="--darkreader-inline-fill: #cc0000;"></path></svg>'
+                    light = '<svg t="1734787639175" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1855" data-darkreader-inline-fill="" width="20" height="20"><path d="M513.44055547 503.62447215m-369.73913846 0a369.73913845 369.73913845 0 1 0 739.47827697 0 369.73913845 369.73913845 0 1 0-739.47827697 0Z" fill="#FF0000" p-id="1856" data-darkreader-inline-fill="" style="--darkreader-inline-fill: #cc0000;"></path></svg>'
                     clearInterval(logInterval);
                     logInterval = null;
                 }else if(status == "检测中"){
-                    light = '<svg t="1734786375155" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1712" data-darkreader-inline-fill="" width="12" height="12"><path d="M513.44055547 503.62447215m-369.73913846 0a369.73913845 369.73913845 0 1 0 739.47827697 0 369.73913845 369.73913845 0 1 0-739.47827697 0Z" fill="#1afa29" p-id="1713" data-darkreader-inline-fill="" style="--darkreader-inline-fill: #04bb3b;"></path></svg>'
+                    light = '<svg t="1734786375155" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1712" data-darkreader-inline-fill="" width="20" height="20"><path d="M513.44055547 503.62447215m-369.73913846 0a369.73913845 369.73913845 0 1 0 739.47827697 0 369.73913845 369.73913845 0 1 0-739.47827697 0Z" fill="#1afa29" p-id="1713" data-darkreader-inline-fill="" style="--darkreader-inline-fill: #04bb3b;"></path></svg>'
                     if(!logInterval){
                         logInterval = setInterval(updateLogs, 2000);
                     }
                     const textarea = document.getElementById('logs');
                     textarea.value = "日志加载中...";
                 }else if(status == "录像中"){
-                    light = '<svg t="1734788083149" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2284" data-darkreader-inline-fill="" width="12" height="12"><path d="M513.44055547 503.62447215m-369.73913846 0a369.73913845 369.73913845 0 1 0 739.47827697 0 369.73913845 369.73913845 0 1 0-739.47827697 0Z" fill="#f4ea2a" p-id="2285" data-darkreader-inline-fill="" style="--darkreader-inline-fill: #847e07;"></path></svg>'
+                    light = '<svg t="1734788083149" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2284" data-darkreader-inline-fill="" width="20" height="20"><path d="M513.44055547 503.62447215m-369.73913846 0a369.73913845 369.73913845 0 1 0 739.47827697 0 369.73913845 369.73913845 0 1 0-739.47827697 0Z" fill="#f4ea2a" p-id="2285" data-darkreader-inline-fill="" style="--darkreader-inline-fill: #847e07;"></path></svg>'
                     if(!logInterval){
                         logInterval = setInterval(updateLogs, 2000);
                     }
@@ -252,10 +269,6 @@
 
     function downloadVideo(filename) {
         window.location.href = 'static/cap/' + filename;
-    }
-
-    function playVideo(filename) {
-        window.open('static/cap/' + filename, '_blank');
     }
 </script>
 
