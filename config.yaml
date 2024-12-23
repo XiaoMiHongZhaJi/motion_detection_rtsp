@@ -1,0 +1,40 @@
+
+# 设置 Bot Token
+bot_token: Bot Token
+
+# 设置推送 chat id
+notice_chat_id: chat id
+
+# 设置代理地址，如 http://127.0.0.1:7890
+proxy_url: None
+
+# RTSP视频流地址
+rtsp_url: rtsp://192.168.1.10:8080/h264_ulaw.sdp
+
+# 运动检测的阈值，默认值为 25000
+motion_threshold: 25000
+
+# 区块最小触发变化量，默认值为 100
+min_contour_area: 100
+
+# 检测到运动时录制时长（秒）
+video_duration: 30
+
+# 显示的日志条数
+log_count: 50
+
+# 录像文件夹
+cap_folder: static/cap/
+
+# 录像文件格式，可取值：avc1 / ffmpeg / H264 / X264 / mp4v / DIVX / XVID / MJPG / VP80
+# python test_fourcc_type.py 可测试支持情况
+# MacOS / Windows 首选 avc1
+# Linux avc1 会报错的话，改为 ffmpeg
+# 其余格式不能在线播放
+fourcc_type: avc1
+
+# 监听地址
+host: 0.0.0.0
+
+# 监听端口
+port: 5500

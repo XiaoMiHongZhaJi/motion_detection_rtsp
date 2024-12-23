@@ -2,11 +2,20 @@ import logging
 from flask import Flask, render_template, request, jsonify
 import threading
 import os
-from motion_detector import start_detection, stop_detection, get_motion_status, log_buffer, set_motion_threshold
+from motion_detector import start_detection, stop_detection, get_motion_status, cap_folder, log_buffer, set_motion_threshold
+import yaml
+
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+with open(THIS_DIR + "/config.yaml", encoding='utf-8') as file:
+    config = yaml.safe_load(file)
+
+# 监听地址
+host = config.get("host")
+
+# 监听端口
+port = config.get("port")
 
 app = Flask(__name__)
-# 录像文件
-cap_folder = 'static/cap/'
 
 
 @app.route('/')
@@ -112,4 +121,4 @@ def get_video_files():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5500)
+    app.run(debug=True, host=host, port=port)
