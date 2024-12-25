@@ -107,12 +107,12 @@ def get_video_files():
 
     listdir = os.listdir(cap_folder)
     for filename in listdir:
-        if filename.endswith('.mp4'):
+        if not filename.endswith('.jpg'):
             video_file = {
                 'filename': filename,
                 'thumbnail': ''
             }
-            jpg_filename = filename.replace('.mp4', '.jpg')
+            jpg_filename = filename.split(".")[0] + '.jpg'
             if jpg_filename in listdir:
                 video_file['thumbnail'] = jpg_filename
             video_files.append(video_file)

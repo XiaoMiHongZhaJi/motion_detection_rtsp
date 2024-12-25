@@ -107,11 +107,11 @@ def record_video(filename, cap, frame):
     # 获取第一帧并保存为 JPG
     cv2.imwrite(filename + ".jpg", frame)
     # 视频格式判断
-    if fourcc_type in ["avc1", "H264", "X264", "mp4v"]:
+    if fourcc_type in ["avc1", "H264", "X264", "mp4v", "vp09"]:
         filename = filename + ".mp4"
     elif fourcc_type in ["DIVX", "XVID", "MJPG"]:
         filename = filename + ".avi"
-    elif fourcc_type in ["VP80"]:
+    elif fourcc_type in ["VP80", "VP90"]:
         filename = filename + ".mkv"
     else:
         log_message(f"录像出错，fourcc_type 格式错误：{fourcc_type}", "error")

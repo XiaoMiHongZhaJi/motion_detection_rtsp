@@ -26,11 +26,11 @@ log_count: 50
 # 录像文件夹
 cap_folder: static/cap/
 
-# 录像文件格式，可取值：avc1 / ffmpeg / H264 / X264 / mp4v / DIVX / XVID / MJPG / VP80
+# 录像文件格式，可取值：avc1 / ffmpeg / H264 / X264 / mp4v / DIVX / XVID / MJPG / VP80 / VP90 / vp09
 # python test_fourcc_type.py 可测试支持情况
 # MacOS / Windows 首选 avc1
-# Linux avc1 会报错的话，改为 ffmpeg
-# 其余格式不能在线播放
+# Linux avc1 报错的话，首选 ffmpeg
+# avc1 / vp09 支持浏览器在线播放，其余格式不能在线播放
 fourcc_type: avc1
 
 # 监听地址
