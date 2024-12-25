@@ -34,7 +34,7 @@
             <div class="d-flex align-items-center">
                 <button id="start" class="btn btn-success" onclick="startDetection()">开始检测</button>
                 <button id="stop" class="btn btn-danger ms-2" onclick="stopDetection()">停止检测</button>
-                <button id="stop" class="btn btn-primary ms-2" onclick="freshDetection()">手动刷新</button>
+                <button id="fresh" class="btn btn-primary ms-2" onclick="freshDetection()">手动刷新</button>
             </div>
         </div>
     </div>
@@ -233,6 +233,7 @@
             })
             .catch(error => {
                 showToast('danger', error);
+                clearInterval(logInterval)
             });
     }
 
